@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Form, APIRouter
 from typing import Annotated
+
+from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.testing.suite.test_reflection import users
@@ -80,6 +82,7 @@ async def get_orders(db: Session = Depends(get_db)):
         print("ERROR in get_orders:", str(e))
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
 
 @router.get("/getstatusorders/{status}")
 async def get_orders_by_status(status: str, db: Session = Depends(get_db)):
@@ -197,4 +200,37 @@ async def get_top_selling_orders(limit: int = 10, db: Session = Depends(get_db))
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
+class UpdateOrderStatus(BaseModel):
+    status: str  # "preparing" or "ready"
+
+@router.patch("/updatestatus/{order_id}")
+async def update_order_status(
+    order_id: int,
+    status_update: UpdateOrderStatus,
+    db: Session = Depends(get_db)
+):
+    try:
+        order_obj = db.query(Order).filter(Order.id == order_id).first()
+        if not order_obj:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        if status_update.status not in ['preparing', 'ready']:
+            raise HTTPException(status_code=400, detail="Invalid status")
+
+        order_obj.status = status_update.status
+        db.commit()
+        db.refresh(order_obj)
+
+        return {
+            "order_id": order_obj.id,
+            "status": order_obj.status,
+            "message": f"Order status updated to {order_obj.status}"
+        }
+    except Exception as e:
+        import traceback
+        print("ERROR in update_order_status:", str(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
 
