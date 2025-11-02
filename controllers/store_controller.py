@@ -59,6 +59,42 @@ async def add_store(
         "status": status
     }
 
+@router.put("/updatestore/{store_id}", status_code=status.HTTP_200_OK)
+async def update_coffee(
+    store_id: str,
+    name: str = Form(...),
+    address: str = Form(...),
+    prep_time_minutes: str = Form(...),
+    status: float = Form(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        stores = db.query(store.AddStore).filter(store.AddStore.id == store_id).first()
+        if not stores:
+            raise HTTPException(status_code=404, detail="Coffee not found")
+
+        stores.name = name
+        stores.address = address
+        stores.prep_time_minutes = prep_time_minutes
+        stores.status = status
+
+        db.commit()
+        db.refresh(stores)
+
+        return {
+            "message": f"Stores '{stores.name}' updated successfully!",
+            "store_id": stores.id,
+            "name": stores.name,
+            "address": stores.address,
+            "status": stores.status
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 @router.get("/getstores/")
 async def get_stores(db: Session = Depends(get_db)):
     stores = db.query(store.AddStore).all()
