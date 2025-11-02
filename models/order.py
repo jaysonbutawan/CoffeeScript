@@ -17,10 +17,11 @@ class OrderStatus(enum.Enum):
     completed = "completed"
     cancelled = "cancelled"
 
+
 class Order(Base):
     __tablename__ = "orders"
-    id = Column(String(50), primary_key=True, index=True)
-    user_id = Column(Integer)
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
     store_id = Column(Integer)
     total_amount = Column(DECIMAL(10, 2), nullable=False)
     order_type = Column(Enum(OrderTypeStatus), default=OrderTypeStatus.pickup)

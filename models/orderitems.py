@@ -10,8 +10,8 @@ class CartStatus(enum.Enum):
 
 class OrderItems(Base):
     __tablename__ = "order_items"
-    id = Column(String(50), primary_key=True, index=True)
-    order_id = Column(Integer)
-    coffee_id = Column(Integer)
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"))
+    coffee_id = Column(String(50), ForeignKey("coffees.id"))
     size = Column(Enum(CartStatus), default=CartStatus.small)
-    quantity = Column(DECIMAL(10, 2), nullable=False)
+    quantity = Column(Integer, nullable=False)

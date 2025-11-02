@@ -2,10 +2,14 @@ from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, F
 from typing import Annotated
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy.testing.suite.test_reflection import users
+
 from database import engine, SessionLocal
 from models import order, orderitems, coffee
-
-
+from models.coffee import AddCoffee
+from models.order import Order
+from models.orderitems import OrderItems
+from models.user import Users
 
 router = APIRouter(prefix="/order", tags=["Order"])
 
@@ -24,25 +28,58 @@ db_dependency = Annotated[Session, Depends(get_db)]
 @router.get("/getorders/")
 async def get_orders(db: Session = Depends(get_db)):
     try:
-        orders = db.query(order.Order).all()
+        # Fetch all orders
+        orders = db.query(Order).all()
+
+        # Debugging: Log what we got
+        print(f"DEBUG: Retrieved {len(orders)} orders from DB")
 
         if not orders:
-            raise HTTPException(status_code=404, detail="No orders found for this admin")
+            raise HTTPException(status_code=404, detail="No orders found")
 
-        return [
-            {
-                "id": order.id,
-                "user_id": order.user_id,
-                "total_amount": order.total_amount,
-                "order_type": order.order_type,
-                "status": order.status
-            }
-            for order in orders
-        ]
+        result = []
+        for o in orders:
+            # User info
+            user = db.query(Users).filter(Users.id == o.user_id).first()
+            user_name = user.name if user else "Unknown"
+
+            # Order items
+            items = (
+                db.query(OrderItems, AddCoffee.name)
+                .join(AddCoffee, OrderItems.coffee_id == AddCoffee.id)
+                .filter(OrderItems.order_id == o.id)
+                .all()
+            )
+
+            print(f"DEBUG: Order {o.id} -> {len(items)} items found")
+
+            item_list = [
+                {
+                    "coffee_name": coffee_name,
+                    "size": getattr(item.size, "value", str(item.size)),
+                    "quantity": float(item.quantity)
+                }
+                for item, coffee_name in items
+            ]
+
+            result.append({
+                "order_id": o.id,
+                "user_id": o.user_id,
+                "user_name": user_name,
+                "store_id": o.store_id,
+                "total_amount": float(o.total_amount),
+                "order_type": getattr(o.order_type, "value", str(o.order_type)),
+                "status": getattr(o.status, "value", str(o.status)),
+                "items": item_list
+            })
+
+        return result
 
     except Exception as e:
-        print(e)
-
+        import traceback
+        print("ERROR in get_orders:", str(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 @router.get("/getstatusorders/{status}")
 async def get_orders_by_status(status: str, db: Session = Depends(get_db)):

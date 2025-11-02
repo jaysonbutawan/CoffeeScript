@@ -10,18 +10,19 @@ class CoffeeStatus(enum.Enum):
     inactive = "inactive"
 
 class AddCoffee(Base):
-    __tablename__ = 'coffees'
-    id = Column(String(50), primary_key=True, index=True)
-    aid = Column(Integer, ForeignKey("admin.AID", ondelete="CASCADE"))
-    name = Column(String(50))
-    description = Column(String(255))
+    __tablename__ = "coffees"
+
+    id = Column(String(50), primary_key=True, unique=True)
+    aid = Column(Integer, ForeignKey("admin.aid", ondelete="CASCADE"))
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
     image = Column(LargeBinary)
-    category_id = Column(Integer, ForeignKey('categories.id', ondelete='CASCADE'))
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"))
     price = Column(DECIMAL(10, 2), nullable=False)
-    status = Column(Enum(CoffeeStatus), default=CoffeeStatus.active)
+    status = Column(Enum("active", "inactive", name="coffee_status"), default="active")
 
+    # ✅ Fix: define relationship back to Admin
     admin = relationship("Admin", back_populates="coffees")
-
 
 
 

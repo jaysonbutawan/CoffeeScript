@@ -43,4 +43,4 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(admin.Admin).filter(admin.Admin.username == user.username).first()
     if not db_user or db_user.password != user.password:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    return {"message": "Login successful", "user_id": db_user.AID}
+    return {"message": "Login successful", "user_id": db_user.aid}
